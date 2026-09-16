@@ -1,0 +1,15 @@
+experiment: rgb_baseline
+model:
+  type: unet
+  input_channels: 3
+  output_channels: 3
+  base_channels: 32
+training:
+  image_size: 256
+  batch_size: 8
+  epochs: 50
+  learning_rate: 0.0002
+  mixed_precision: true
+loss:
+  shadow_weight: 1.0
+  nonshadow_weight: 1.0
