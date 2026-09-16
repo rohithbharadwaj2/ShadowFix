@@ -1,0 +1,5 @@
+model,psnr,ssim,shadow_psnr,nonshadow_psnr
+Mask-Guided U-Net,30.189,0.9514,26.303,31.887
+RGB Baseline,27.176,0.9324,24.097,28.549
+RGB Residual (50 epochs),26.589,0.9268,25.062,27.223
+RGB Residual (continued),26.428,0.9268,25.027,27.036
