@@ -2,94 +2,73 @@
 
 ## Deep Learning for Real-World Shadow Removal
 
-ShadowFix is a computer-vision image-restoration project studying how U-Net formulations remove real-world shadows while preserving texture, color, and non-shadow regions.
+ShadowFix is a computer-vision image-restoration project comparing RGB, residual, and mask-guided U-Net approaches for removing real-world shadows while preserving non-shadow content.
 
-The project evaluates RGB, residual, and mask-guided restoration approaches on the ISTD benchmark and includes quantitative evaluation, region-specific analysis, failure-case analysis, and an interactive Gradio prototype.
+> **Best reported benchmark:** **30.189 dB PSNR · 0.9514 SSIM · 26.303 dB Shadow-Region PSNR** on **540 held-out ISTD test triplets**.
 
-> **Best benchmark result:** **30.189 dB PSNR · 0.9514 SSIM · 26.303 dB Shadow-Region PSNR** on 540 held-out ISTD test triplets.
-
-**Tech:** Python · PyTorch · OpenCV · U-Net · Gradio · NumPy · CUDA
+**Python · PyTorch · OpenCV · U-Net · Gradio · NumPy · CUDA**
 
 ---
 
 ## Highlights
 
-- Compared four restoration variants under a common evaluation pipeline.
-- Evaluated overall PSNR/SSIM as well as shadow- and non-shadow-region PSNR.
+- Compared **RGB U-Net**, **RGB Residual U-Net**, **Mask-Guided U-Net**, and traditional shadow correction.
+- Evaluated overall **PSNR / SSIM** plus **shadow- and non-shadow-region PSNR**.
 - Mask guidance improved overall PSNR by **+3.01 dB** and shadow-region PSNR by **+2.21 dB** over the RGB baseline.
-- Built automatic and guided Gradio workflows for testing restoration on real-world images.
-- Analyzed out-of-distribution behavior, mask sensitivity, and restoration artifacts rather than reporting benchmark metrics alone.
+- Built automatic and guided Gradio workflows for real-world testing.
+- Documented out-of-distribution behavior, mask sensitivity, visible boundary artifacts, and limitations rather than reporting benchmark metrics alone.
 
 ## Results
 
 | Model | PSNR (dB) | SSIM | Shadow PSNR | Non-Shadow PSNR |
 |---|---:|---:|---:|---:|
 | **Mask-Guided U-Net** | **30.189** | **0.9514** | **26.303** | **31.887** |
-| RGB Baseline | 27.176 | 0.9324 | 24.097 | 28.549 |
-| RGB Residual (50 epochs) | 26.589 | 0.9268 | 25.062 | 27.223 |
-| RGB Residual (continued) | 26.428 | 0.9268 | 25.027 | 27.036 |
+| RGB U-Net baseline | 27.176 | 0.9324 | 24.097 | 28.549 |
+| RGB Residual U-Net (50 epochs) | 26.589 | 0.9268 | 25.062 | 27.223 |
+| RGB Residual U-Net (continued) | 26.428 | 0.9268 | 25.027 | 27.036 |
 
-### What the results show
+The project README also records traditional correction at **24.700 dB PSNR**.
 
-The mask-guided model produced the strongest result across every reported metric. Explicit shadow-location information lets the network focus restoration on the affected region while better preserving surrounding content.
+### Why mask guidance helped
 
-The residual variants corrected shadow regions more strongly than the RGB baseline in some cases, but changed non-shadow regions more aggressively, reducing overall benchmark performance. This trade-off is useful because visually stronger correction does not necessarily correspond to better full-image reconstruction metrics.
-
----
-
-## System Overview
-
-```text
-ISTD Triplets
-Shadow Image + Mask + Shadow-Free Target
-                 │
-                 ▼
-          Data Preparation
-                 │
-       ┌─────────┴─────────┐
-       ▼                   ▼
-   RGB Models       Mask-Guided U-Net
-       │                   │
-       └─────────┬─────────┘
-                 ▼
-              Training
-                 │
-                 ▼
-             Evaluation
-       ┌─────────┼──────────┐
-       ▼         ▼          ▼
-     PSNR       SSIM    Region PSNR
-                 │
-                 ▼
-           Gradio Prototype
-          ┌──────┴──────┐
-          ▼             ▼
-      Automatic       Guided
-        Mode           Mode
-```
-
-## Model Variants
-
-### RGB Baseline
-A three-channel shadow image is mapped directly to a three-channel restored image. This is the simplest automatic setting because no shadow mask is required.
-
-### Mask-Guided U-Net
-The model receives the RGB image together with a shadow mask. The mask tells the network where restoration is needed, reducing the burden of simultaneously localizing and correcting the shadow.
-
-```text
-RGB Image + Shadow Mask → U-Net → Restored RGB Image
-```
-
-This model achieved the strongest benchmark performance.
-
-### RGB Residual Variants
-The residual formulation predicts a correction to the input rather than reconstructing the complete output from scratch. It preserved useful source texture but could alter non-shadow regions more aggressively.
+The mask-guided model receives explicit information about where the shadow lies. In the reported experiments this produced the strongest result across all four quantitative metrics, allowing restoration to focus on affected pixels while better preserving surrounding content.
 
 ---
+
+## Experimental Pipeline
+
+```text
+ISTD Dataset
+Shadow Image + Shadow Mask + Shadow-Free Target
+                     │
+                     ▼
+              Data Preparation
+                     │
+          ┌──────────┴──────────┐
+          ▼                     ▼
+      RGB Models         Mask-Guided Model
+          │                     │
+          └──────────┬──────────┘
+                     ▼
+                  Training
+                     │
+                     ▼
+                 Evaluation
+        ┌────────────┼────────────┐
+        ▼            ▼            ▼
+      PSNR          SSIM      Region PSNR
+                     │
+                     ▼
+               Gradio Prototype
+              ┌──────┴──────┐
+              ▼             ▼
+          Automatic       Guided
+             Mode          Mode
+```
 
 ## Dataset
 
-Experiments use the **ISTD (Image Shadow Triplets Dataset)**. Each sample contains a shadow image, binary shadow mask, and corresponding shadow-free target.
+Experiments use the **ISTD (Image Shadow Triplets Dataset)**. Each sample contains a shadow image, binary shadow mask, and shadow-free ground truth.
 
 | Split | Samples |
 |---|---:|
@@ -97,20 +76,43 @@ Experiments use the **ISTD (Image Shadow Triplets Dataset)**. Each sample contai
 | Validation | 133 |
 | Test | 540 |
 
-Images were resized to **256 × 256** for the reported experiments. The dataset itself is **not redistributed in this repository**; obtain it from its official source and follow its licensing terms.
+Reported neural experiments resize images to **256 × 256**. ISTD is not redistributed here.
 
-## Training Configuration
+## Recorded Training Setup
 
-| Parameter | Value |
-|---|---|
-| Image size | 256 × 256 |
-| Batch size | 8 |
-| Base channels | 32 |
-| Framework | PyTorch |
-| Training hardware | NVIDIA Tesla T4 |
-| Precision | Automatic Mixed Precision |
+The original Colab workflow records the following primary settings:
 
-Mask-guided training used stronger weighting inside the shadow region so that the objective prioritizes the area requiring correction while still penalizing unwanted changes elsewhere.
+| Parameter | RGB baseline | Mask-guided |
+|---|---:|---:|
+| Image size | 256 | 256 |
+| Batch size | 8 | 8 |
+| Epochs | 50 | 50 |
+| Learning rate | 2e-4 | 2e-4 |
+| Base channels | 32 | 32 |
+| Shadow weight | 1 | 4 |
+| Non-shadow weight | 1 | 1 |
+| Edge weight | — | 0.05 |
+| AMP | enabled | enabled |
+
+A later RGB residual experiment recorded in the Colab export uses learning rate `1e-4`, shadow weight `6`, non-shadow weight `1`, edge weight `0.10`, and residual output mode.
+
+For more detail, see [`docs/EXPERIMENTS.md`](docs/EXPERIMENTS.md).
+
+---
+
+## Interactive Demo
+
+The submitted Gradio prototype contains two workflows.
+
+### Automatic Mode
+
+The automatic demo uses the **RGB Residual U-Net checkpoint (`baseline_final/best.pth`)** because it can process an arbitrary RGB image without requiring a ground-truth mask.
+
+### Guided Mode
+
+The user can paint an approximate shadow region and control restoration strength. The original workflow also includes a local-luminance shadow-mask heuristic and mask-aware blending logic; the reusable parts available in the submitted Colab export are preserved in [`app/demo_utils.py`](app/demo_utils.py).
+
+> **Benchmark vs. demo:** the Mask-Guided U-Net is the best reported benchmark model, but it requires mask information. The automatic demo intentionally uses an RGB model for practical user input.
 
 ---
 
@@ -118,44 +120,29 @@ Mask-guided training used stronger weighting inside the shadow region so that th
 
 **PSNR** measures pixel-level reconstruction similarity to the shadow-free target.
 
-**SSIM** measures structural similarity using local luminance, contrast, and structure.
+**SSIM** measures structural similarity in luminance, contrast, and local structure.
 
-**Shadow-region PSNR** isolates reconstruction quality inside the shadow mask.
+**Shadow-region PSNR** evaluates correction specifically inside the shadow mask.
 
-**Non-shadow-region PSNR** measures how well the model preserves content that should remain unchanged.
+**Non-shadow-region PSNR** evaluates preservation of areas that should remain unchanged.
 
-Region-specific evaluation is important: a model can brighten a shadow aggressively while damaging unaffected parts of the image, or achieve a strong global metric while leaving visible shadow artifacts.
-
----
-
-## Interactive Demo
-
-ShadowFix includes two prototype workflows.
-
-### Automatic Mode
-Users provide an RGB image and receive a restored output without supplying a ground-truth mask. The automatic prototype uses an RGB model because it can operate directly on arbitrary RGB input.
-
-### Guided Mode
-Users paint an approximate shadow region and select restoration strength. The generated mask controls where the restored result is blended into the source image.
-
-> **Benchmark vs. demo:** the Mask-Guided U-Net is the strongest benchmark model but requires a shadow mask. The automatic demo therefore uses an RGB model so users can test arbitrary images without ground-truth mask information.
+Using region-specific metrics matters because aggressive brightening can improve the shadow while damaging unaffected content.
 
 ---
 
 ## Limitations
 
-- Training at 256 × 256 can lose fine high-resolution texture.
-- Mask-guided restoration depends on mask quality.
-- Phone/internet images may differ substantially from the ISTD training distribution.
-- Difficult examples can retain faint boundaries, color shifts, or over-smoothed texture.
-- PSNR and SSIM do not completely measure perceptual realism; perceptual metrics such as LPIPS and user studies would be useful extensions.
+- 256 × 256 training can lose fine high-resolution detail.
+- Mask-guided restoration depends strongly on mask quality.
+- External phone/internet images can differ substantially from ISTD.
+- Difficult cases can retain faint boundaries, color shifts, or smoothed texture.
+- PSNR and SSIM do not fully represent perceptual realism; LPIPS and human evaluation are reasonable future additions.
 
-## Future Work
+## Public Repository Scope
 
-- Integrate learned shadow detection with restoration for a fully automatic pipeline.
-- Evaluate perceptual quality with LPIPS and human preference studies.
-- Explore higher-resolution and multi-scale restoration.
-- Improve robustness to out-of-distribution lighting, cameras, and surfaces.
+The materials available for this public cleanup include the **final Colab workflow/export, final report, presentation, project README, and recorded demo**. The original submission documentation references a separate `shadow_removal_project/` directory containing `train.py`, `evaluate.py`, dataset handling, inference code, and utilities, plus `.pth` checkpoints. Those source/checkpoint files are **not present in the materials currently available here**.
+
+For that reason, this repository deliberately does **not** invent replacement training/inference code or claim that the complete experiment is reproducible from this snapshot. It preserves the verified results, recorded configurations, experiment documentation, and authentic demo utilities that are supported by the available project materials.
 
 ---
 
@@ -163,13 +150,19 @@ Users paint an approximate shadow region and select restoration strength. The ge
 
 ```text
 ShadowFix/
-├── src/                  # Reusable model, data, training and evaluation modules
-├── app/                  # Gradio application
-├── configs/              # Reproducible experiment configurations
-├── results/              # Benchmark results
-├── tests/                # Lightweight validation tests
-├── docs/                 # Project documentation
-├── assets/               # Demo and README visuals
+├── app/
+│   └── demo_utils.py            # Utilities extracted from original Gradio workflow
+├── configs/
+│   ├── rgb_baseline.yaml        # Recorded baseline configuration
+│   └── mask_guided.yaml         # Recorded mask-guided configuration
+├── docs/
+│   ├── EXPERIMENTS.md           # Experiment and reproducibility notes
+│   └── README.md                # Documentation index
+├── results/
+│   └── model_comparison.csv     # Final reported benchmark table
+├── assets/
+│   └── README.md                # Visual-asset placement guide
+├── .gitignore
 ├── requirements.txt
 └── README.md
 ```
@@ -178,12 +171,16 @@ ShadowFix/
 
 This project was developed collaboratively by **Odra Bira, Pranay Lachuluri, and Rohith Bharadwaj**.
 
-**Rohith Bharadwaj's documented contributions:** evaluation design, model-comparison analysis, Gradio interface testing, qualitative result selection, failure-case analysis, and documentation review. All team members participated in reviewing outputs, discussing failure cases, and preparing the final presentation narrative.
+**Rohith Bharadwaj's documented contributions:** evaluation design, model-comparison analysis, Gradio interface testing, qualitative result selection, failure-case analysis, and documentation review. All team members participated in reviewing results, discussing failure cases, and preparing the final presentation narrative.
 
-## Reproducibility
+## Future Work
 
-Experiment configurations and benchmark results are versioned in this repository. Dataset files and large model checkpoints are intentionally excluded from normal Git history.
+- Recover and publish the original training/evaluation source if available and permitted.
+- Integrate learned shadow detection with restoration for a fully automatic pipeline.
+- Evaluate perceptual quality with LPIPS and human preference studies.
+- Explore higher-resolution and multi-scale restoration.
+- Improve robustness to out-of-distribution lighting, cameras, and surfaces.
 
 ## License
 
-No open-source license is asserted yet. Before redistributing or reusing project code, models, or third-party assets, verify the applicable permissions and dataset terms.
+No open-source license is asserted yet. Before redistributing or reusing project code, model checkpoints, dataset content, or third-party assets, verify the applicable permissions and ISTD terms.
