@@ -1,1 +1,0 @@
-"""ShadowFix reusable source package."""
